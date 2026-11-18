@@ -26,7 +26,7 @@ export default {
 
     if (req.method === 'OPTIONS') return new Response(null, { status: okOrigin ? 204 : 403, headers: cors });
     const path = new URL(req.url).pathname;
-    if (req.method === 'GET' && path === '/') return new Response('Caddie Shot Notes relay is running.', { status: 200 });
+    if (req.method === 'GET' && path === '/') return new Response(`Caddie Shot Notes relay is running. token:${env.NOTION_TOKEN ? 'set' : 'missing'} db:${env.NOTION_DATA_SOURCE ? 'set' : 'missing'}`, { status: 200 });
     if (!okOrigin) return reply(403, { error: 'origin_not_allowed' });
     if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' });
     if (!env.NOTION_TOKEN || !env.NOTION_DATA_SOURCE) return reply(500, { error: 'relay_not_configured' });
@@ -47,7 +47,7 @@ export default {
 
         const files = [];
         for (let k = 0; k < images.length; k++) {
-          const f = await uploadImage(env, images[k], `${roundId}-tip${tipNo}-${k + 1}.jpg`);
+          const f = await uploadImage(env, images[k], `${roundId}-tip${tipNo}-${k + 1}`);
           if (f) files.push(f);
         }
 
@@ -126,6 +126,7 @@ async function findTips(notion, env, roundId, tipNo) {
 async function uploadImage(env, dataUrl, filename) {
   const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
   if (!m) return null;
+  filename += '.' + ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' })[m[1]];
   const bytes = Uint8Array.from(atob(m[2]), c => c.charCodeAt(0));
   if (bytes.length > MAX_IMAGE_BYTES) return null;
   const created = await notionCall(env, 'POST', '/file_uploads', { mode: 'single_part', filename, content_type: m[1] });
