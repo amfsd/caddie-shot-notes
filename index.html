@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Caddie Shot Notes</title>
+<style>
+  :root{
+    --ink:#111;--muted:#666;--line:#bdbdbd;--zebra:#f3f3f3;--star:#f5b301;--accent:#0a7d3b;
+    --safe-b:env(safe-area-inset-bottom,0px);--safe-l:env(safe-area-inset-left,0px);--safe-r:env(safe-area-inset-right,0px);--safe-t:env(safe-area-inset-top,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--ink);background:#e9e9e9}
+  .page{max-width:1100px;margin:24px auto;background:#fff;padding:28px 32px 40px;box-shadow:0 1px 6px rgba(0,0,0,.12)}
+  h1{font-size:19px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px}
+  .sync{font-size:12px;color:var(--muted);margin:0 0 16px;min-height:16px}
+  .sync.bad{color:#9a5b00}
+  .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px 24px;margin-bottom:16px;font-size:14px}
+  .meta label{display:flex;align-items:flex-end;gap:6px;min-width:0}
+  .meta span{white-space:nowrap}
+  .meta input{flex:1;min-width:0;width:100%;max-width:100%;border:0;border-bottom:1px solid #444;border-radius:0;font:inherit;font-size:16px;padding:4px 2px;background:transparent;color:inherit}
+  .meta input:focus{outline:none;border-bottom-color:var(--accent)}
+  .legend{font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.5}
+  .legend b{color:var(--ink)}
+  .summary{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px;font-size:13px}
+  .pill{border:1px solid var(--line);border-radius:999px;padding:4px 10px;background:#fafafa}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+  button{font:inherit;font-size:14px;border:1px solid #bbb;background:#fff;color:var(--ink);border-radius:8px;padding:8px 12px;cursor:pointer;touch-action:manipulation}
+  button:hover{border-color:#777}
+  button.primary{background:#000;color:#fff;border-color:#000}
+  button[hidden]{display:none}
+  button.send{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button:disabled{opacity:.6;cursor:default}
+
+  table{width:100%;border-collapse:collapse;border:1.5px solid #000;font-size:15px}
+  thead th{background:#000;color:#fff;text-align:left;padding:9px 10px;font-weight:700}
+  tbody tr:nth-child(even){background:var(--zebra)}
+  td{border:1px solid var(--line);vertical-align:top;padding:0}
+  td.hole,td.shot{width:68px}
+  td.stars{width:190px}
+  td.shots{width:210px}
+  td.del{width:44px;text-align:center}
+  td input,td textarea{width:100%;border:0;border-radius:0;background:transparent;font:inherit;font-size:16px;padding:9px 8px;color:inherit}
+  td textarea{min-height:42px;display:block;resize:none;overflow:hidden;line-height:1.35}
+  td input:focus,td textarea:focus{outline:2px solid var(--accent);outline-offset:-2px;background:#fff}
+  .starbox{display:flex;padding:2px 2px}
+  .star{background:none;border:0;padding:0;width:36px;height:40px;font-size:25px;line-height:40px;color:#9a9a9a;cursor:pointer;border-radius:6px}
+  .star.on{color:var(--star)}
+  .star:focus-visible{outline:2px solid var(--accent)}
+  .imgs{display:flex;flex-wrap:wrap;gap:6px;padding:6px}
+  .thumb{position:relative;width:40px;height:66px;border:1px solid #ccc;border-radius:5px;overflow:hidden;background:#ddd;cursor:zoom-in;padding:0}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb.busy{display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;cursor:default}
+  .thumb .x{position:absolute;top:0;right:0;width:26px;height:26px;border-radius:0 0 0 8px;border:0;background:rgba(0,0,0,.7);color:#fff;font-size:15px;line-height:26px;padding:0;cursor:pointer}
+  .add{width:40px;height:66px;border:1.5px dashed #999;border-radius:5px;background:transparent;color:#666;font-size:22px;display:flex;align-items:center;justify-content:center;padding:0}
+  tr.drop{outline:3px dashed var(--accent);outline-offset:-3px}
+  .delrow{border:0;background:none;color:#999;font-size:17px;width:44px;height:44px;padding:0;border-radius:8px}
+  .delrow:hover{color:#c00}
+  .hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
+  .bottombar{display:none}
+
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:20;padding:20px}
+  .overlay.show{display:flex}
+  .dialog{background:#fff;border-radius:12px;max-width:360px;width:100%;padding:18px 18px 14px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+  .dialog p{margin:0 0 16px;font-size:15px;line-height:1.4}
+  .dialog .row{display:flex;gap:8px;justify-content:flex-end}
+  .dialog .danger{background:#b00020;border-color:#b00020;color:#fff}
+  #lightbox{background:rgba(0,0,0,.9);cursor:zoom-out;padding:0}
+  #lightbox img{max-width:100vw;max-height:100vh;max-height:100dvh;object-fit:contain}
+  .toast{position:fixed;left:50%;bottom:calc(84px + var(--safe-b));transform:translateX(-50%);background:#111;color:#fff;font-size:14px;padding:9px 14px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:30;max-width:90vw;text-align:center}
+  .toast.show{opacity:1}
+
+  @media (max-width:720px){
+    body{background:#fff}
+    .page{margin:0;padding:calc(16px + var(--safe-t)) calc(14px + var(--safe-r)) calc(96px + var(--safe-b)) calc(14px + var(--safe-l));box-shadow:none}
+    .meta{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
+    .meta input[type=date]{-webkit-appearance:none;appearance:none;min-height:32px;text-align:left}
+    .meta label{flex-direction:column;align-items:stretch;gap:2px}
+    .meta span{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+    .meta label.wide{grid-column:1 / -1}
+    #addRowTop{display:none}
+    .toolbar button{flex:1 1 auto;font-size:13px;padding:9px 10px}
+    table,thead,tbody,tr,td{display:block;width:100%}
+    thead{display:none}
+    table{border:0}
+    tbody tr{border:1.5px solid #000;border-radius:10px;margin-bottom:12px;background:#fff !important;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 48px;overflow:hidden}
+    td{border:0;border-bottom:1px solid #e6e6e6;width:auto !important}
+    td.hole{grid-column:1;border-right:1px solid #e6e6e6}
+    td.shot{grid-column:2}
+    td.del{grid-column:3;grid-row:1;display:flex;align-items:center;justify-content:center}
+    td.stars,td.notes,td.shots{grid-column:1 / -1}
+    td.shots{border-bottom:0}
+    td[data-l]::before{content:attr(data-l);display:block;font-size:11px;font-weight:700;color:var(--muted);padding:7px 10px 0;text-transform:uppercase;letter-spacing:.03em}
+    td input,td textarea{padding:6px 10px 10px}
+    .starbox{justify-content:space-between;padding:0 6px 4px;max-width:340px}
+    .star{width:56px;height:52px;font-size:36px;line-height:52px}
+    .imgs{padding:6px 10px 12px;gap:8px}
+    .thumb,.add{width:64px;height:110px}
+    .add{font-size:28px}
+    .hint{display:none}
+    .bottombar{display:flex;gap:10px;align-items:center;position:fixed;left:0;right:0;bottom:0;z-index:10;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid #ddd;padding:10px calc(14px + var(--safe-r)) calc(10px + var(--safe-b)) calc(14px + var(--safe-l))}
+    .bottombar .count{font-size:13px;color:var(--muted);flex:0 0 auto}
+    .bottombar button{flex:1;font-size:17px;font-weight:600;padding:14px;border-radius:12px}
+  }
+
+  @media print{
+    @page{size:A4;margin:12mm}
+    body{background:#fff}
+    .page{box-shadow:none;margin:0;padding:0;max-width:none}
+    .toolbar,.hint,.del,.delrow,.add,.thumb .x,.sync,.overlay,.bottombar,.toast{display:none !important}
+    .star{font-size:18px;width:auto;height:auto;line-height:1}
+    .thumb{width:90px;height:auto}
+    .thumb img{height:auto;object-fit:contain}
+    tbody tr{break-inside:avoid}
+    thead th,tbody tr:nth-child(even){-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Caddie Shot Notes</h1>
+  <p class="sub">Decide your own shot first, then open the tip. Rate it, add a quick note and attach the screenshot. When you finish, tap <b>Send to Hole19</b>. You can send again after edits.</p>
+  <p class="sync" id="sync"></p>
+
+  <div class="meta">
+    <label><span>Tester</span><input data-meta="tester" autocomplete="name" enterkeyhint="next"></label>
+    <label><span>Date</span><input data-meta="date" type="date"></label>
+    <label class="wide"><span>Course</span><input data-meta="course" enterkeyhint="next"></label>
+    <label><span>Tees</span><input data-meta="tees" enterkeyhint="next"></label>
+    <label><span>App build</span><input data-meta="build" placeholder="TestFlight version" enterkeyhint="done"></label>
+  </div>
+
+  <p class="legend"><b>5</b> Great recommendation · <b>4</b> Good · <b>3</b> OK with issues · <b>2</b> Poor decision · <b>1</b> Would make my score worse</p>
+
+  <div class="summary" id="summary"></div>
+
+  <div class="toolbar">
+    <button class="primary" id="addRowTop">+ Add tip</button>
+    <button class="send" id="send">Send to Hole19</button>
+    <button id="report">Download PDF report</button>
+    <button id="csv">Export CSV</button>
+    <button id="print" hidden>Print</button>
+    <button id="reset">New round</button>
+  </div>
+
+  <table>
+    <thead><tr><th>Hole</th><th>Shot</th><th>Tip Review</th><th>Notes</th><th>Screenshots</th><th class="del"></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <p class="hint">Screenshots: click <b>+</b> on a tip, drag images onto its row, or click into a row and paste (Ctrl/Cmd+V). Your round saves automatically.</p>
+</div>
+
+<div class="bottombar">
+  <span class="count" id="countMini"></span>
+  <button class="primary" id="addRowBottom">+ Add tip</button>
+  <button class="send" id="sendBottom">Send</button>
+</div>
+
+<div class="overlay" id="dialog" role="dialog" aria-modal="true">
+  <div class="dialog"><p id="dialogText"></p><div class="row"><button id="dialogNo">Cancel</button><button class="danger" id="dialogYes">OK</button></div></div>
+</div>
+<div class="overlay" id="lightbox"><img alt=""></div>
+<div class="toast" id="toast"></div>
+<input type="file" id="imgPicker" accept="image/*" multiple hidden>
+
+<script>
+(function(){
+  const LOCAL_KEY = 'caddie-shot-notes-v2';
+  const MAX_SIDE = 1400;
+  const isPhone = () => window.matchMedia('(max-width:720px)').matches;
+
+  // Relay that writes tips into the Notion database (Cloudflare Worker, see worker/).
+  const RELAY_URL = 'https://caddie-shot-notes-relay.REPLACE.workers.dev';
+
+  const newRoundId = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10));
+  const blankRow = () => ({hole:'', shot:'', stars:0, notes:'', imgs:[]});
+  const blankState = () => ({v:2, updatedAt:0, roundId:newRoundId(), nextTip:1, meta:{tester:'',course:'',date:'',tees:'',build:''}, rows:Array.from({length:isPhone()?3:18}, blankRow)});
+  let state = blankState();
+  let activeRow = 0, pickerRow = 0;
+
+  const hosted = false;
+  let remote = null, assets = null, downloads = null;
+  const use = n => { try{ return Promise.resolve(window.claude.use(n)).catch(()=>null); }catch(e){ return Promise.resolve(null); } };
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const imgSrc = im => im.id ? '/_blob/' + im.id : im.src;
+  const hasContent = r => r.stars || r.notes || r.imgs.length || r.hole || r.shot;
+  function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2600); }
+  function syncLine(msg, bad){ const s=$('sync'); s.textContent=msg; s.classList.toggle('bad',!!bad); }
+  function ask(text, yes='OK'){
+    return new Promise(res=>{
+      $('dialogText').textContent=text; $('dialogYes').textContent=yes; $('dialog').classList.add('show');
+      const done = v => { $('dialog').classList.remove('show'); $('dialogYes').onclick=$('dialogNo').onclick=null; res(v); };
+      $('dialogYes').onclick=()=>done(true); $('dialogNo').onclick=()=>done(false);
+    });
+  }
+
+  /* local storage */
+  let idb = null;
+  function openDB(){ return new Promise(res=>{ try{ const r=indexedDB.open('caddie-shot-notes',1); r.onupgradeneeded=()=>r.result.createObjectStore('kv'); r.onsuccess=()=>res(r.result); r.onerror=()=>res(null); r.onblocked=()=>res(null); setTimeout(()=>res(null),3000);}catch(e){res(null);} }); }
+  function idbGet(){ return new Promise(res=>{ try{ const q=idb.transaction('kv').objectStore('kv').get(LOCAL_KEY); q.onsuccess=()=>res(q.result||null); q.onerror=()=>res(null);}catch(e){res(null);} }); }
+  function idbSet(v){ return new Promise(res=>{ try{ const tx=idb.transaction('kv','readwrite'); tx.objectStore('kv').put(v,LOCAL_KEY); tx.oncomplete=()=>res(true); tx.onerror=()=>res(false);}catch(e){res(false);} }); }
+  const clean = () => JSON.parse(JSON.stringify(state, (k,v)=> k==='_busy' ? undefined : v));
+  async function loadLocal(){
+    idb = await openDB();
+    let v = idb ? await idbGet() : null;
+    if(!v){ try{ const s=localStorage.getItem(LOCAL_KEY); if(s) v=JSON.parse(s);}catch(e){} }
+    if(v && Array.isArray(v.rows)){
+      if(!v.roundId) v.roundId = newRoundId();
+      if(!v.nextTip) v.nextTip = 1 + Math.max(0, ...v.rows.map(r=>r.n||0));
+      v.rows.forEach(r=>{ r.imgs = (r.imgs||[]).filter(i=>i.src); });
+      return v;
+    }
+    return null;
+  }
+  let localOk = true;
+  async function saveLocal(){
+    const v = clean();
+    let ok = idb ? await idbSet(v) : false;
+    if(!ok){ try{ localStorage.setItem(LOCAL_KEY, JSON.stringify(v)); ok=true; }catch(e){} }
+    localOk = ok;
+  }
+
+  /* remote storage: the tester's own private record, any device */
+  const remoteBody = () => ({v:2, updatedAt:state.updatedAt, meta:state.meta,
+    rows:state.rows.map(r=>({hole:r.hole, shot:r.shot, stars:r.stars, notes:r.notes, imgs:r.imgs.filter(i=>i.id).map(i=>({id:i.id}))}))});
+  let writing = false, writeAgain = false, remoteOk = null;
+  async function saveRemote(){
+    if(!remote) return;
+    if(writing){ writeAgain = true; return; }
+    writing = true;
+    try{ await remote.ref.set(remoteBody()); remoteOk = true; }
+    catch(e){ remoteOk = false; }
+    writing = false;
+    status();
+    if(writeAgain){ writeAgain=false; saveRemote(); }
+  }
+
+  function status(){
+    const localOnly = state.rows.some(r=>r.imgs.some(i=>!i.id));
+    if(remote){
+      if(remoteOk === false) syncLine('Saved on this device. Could not reach your account, will retry on your next change.', true);
+      else syncLine(localOnly ? 'Saved to your account. Some screenshots are on this device only.' : 'Saved to your account, open it on any device.');
+    } else if(hosted){
+      syncLine(localOk ? 'Saved in this browser only.' : 'Not saving. Download the report before closing.', !localOk);
+    } else {
+      const n = unsent().length;
+      const tail = n ? ` ${n} tip${n>1?'s':''} not sent to Hole19 yet.` : (state.rows.some(r=>r.sent) ? ' All tips sent to Hole19.' : '');
+      syncLine((localOk ? 'Saved in this browser.' : 'Not saving. Send to Hole19 or download the report before closing.') + tail, !localOk);
+    }
+    const label = unsent().length ? `Send to Hole19 (${unsent().length})` : 'Send to Hole19';
+    if(!sending){ $('send').textContent = label; $('sendBottom').textContent = unsent().length ? `Send (${unsent().length})` : 'Send'; }
+  }
+
+  /* send to Notion via the relay */
+  const sig = r => JSON.stringify([state.meta, r.hole, r.shot, r.stars, r.notes, r.imgs.map(i=>(i.src||'').length)]);
+  const unsent = () => state.rows.filter(r => hasContent(r) && r.sent !== sig(r));
+  let sending = false;
+  async function post(path, body){
+    const res = await fetch(RELAY_URL + path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const out = await res.json().catch(()=>({}));
+    if(!res.ok || !out.ok) throw new Error(out.error || ('HTTP ' + res.status));
+    return out;
+  }
+  async function send(){
+    if(sending) return;
+    if(!state.meta.tester.trim()){ toast('Add your name in Tester first.'); document.querySelector('[data-meta="tester"]').focus(); return; }
+    const todo = unsent();
+    const pruneNeeded = state.sentTips && state.sentTips.some(n => !state.rows.some(r => r.n === n && hasContent(r)));
+    if(!todo.length && !pruneNeeded){ toast('Nothing new to send.'); return; }
+    sending = true; const btns = [$('send'), $('sendBottom')]; btns.forEach(b=>b.disabled=true);
+    let done = 0, failed = 0;
+    try{
+      for(const r of todo){
+        if(!r.n) r.n = state.nextTip++;
+        btns.forEach(b=>b.textContent = `Sending ${done+failed+1} of ${todo.length}…`);
+        const s = sig(r);
+        try{
+          await post('/tip', {roundId:state.roundId, tip:r.n, meta:state.meta,
+            row:{hole:r.hole, shot:r.shot, stars:r.stars, notes:r.notes},
+            images:r.imgs.map(i=>i.src).filter(src=>/^data:image\//.test(src||''))});
+          r.sent = s; done++;
+        }catch(e){ failed++; }
+      }
+      const keep = state.rows.filter(r=>r.n && hasContent(r)).map(r=>r.n);
+      if(pruneNeeded){ try{ await post('/prune', {roundId:state.roundId, keep}); }catch(e){ failed++; } }
+      state.sentTips = keep;
+      await saveLocal();
+    } finally {
+      sending = false; btns.forEach(b=>b.disabled=false); status();
+    }
+    if(failed) toast(`${done} sent, ${failed} failed. Check your connection and tap Send again.`);
+    else toast(done ? `Sent ${done} tip${done>1?'s':''} to Hole19. Thank you!` : 'Hole19 already has everything.');
+  }
+  $('send').onclick = send; $('sendBottom').onclick = send;
+
+  let tLocal=null, tRemote=null;
+  function changed(){
+    state.updatedAt = Date.now();
+    clearTimeout(tLocal); tLocal = setTimeout(async()=>{ await saveLocal(); status(); }, 250);
+    clearTimeout(tRemote); tRemote = setTimeout(saveRemote, 1200);
+  }
+
+  /* images */
+  function shrink(file){
+    return new Promise((res,rej)=>{
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = ()=>{
+        const k = Math.min(1, MAX_SIDE/Math.max(img.width,img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width*k); c.height = Math.round(img.height*k);
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        URL.revokeObjectURL(url);
+        const dataUrl = c.toDataURL('image/jpeg',0.82);
+        c.toBlob(b=> b ? res({blob:b, dataUrl}) : rej(), 'image/jpeg', 0.82);
+      };
+      img.onerror = ()=>{ URL.revokeObjectURL(url); rej(); };
+      img.src = url;
+    });
+  }
+  async function addImages(i, files){
+    const list = [...files].filter(f=>(f.type||'').startsWith('image/') || /\.(heic|heif|jpe?g|png|webp|gif)$/i.test(f.name||''));
+    if(!list.length) return;
+    const row = state.rows[i];
+    row._busy = (row._busy||0) + list.length; renderImgs(i);
+    let failed = 0;
+    for(const f of list){
+      try{
+        const {blob, dataUrl} = await shrink(f);
+        let entry = null;
+        if(assets){ try{ const up = await assets.upload(blob, {type:'image/jpeg'}); entry = {id:up.id}; }catch(e){} }
+        row.imgs.push(entry || {src:dataUrl});
+      }catch(e){ failed++; }
+      row._busy--; renderImgs(i);
+    }
+    if(failed) toast(failed === 1 ? 'One image could not be read.' : failed + ' images could not be read.');
+    summary(); changed();
+  }
+
+  /* render */
+  const tbody = $('rows');
+  function rowHtml(r,i){
+    return `<tr data-i="${i}">
+      <td class="hole" data-l="Hole"><input inputmode="numeric" pattern="[0-9]*" enterkeyhint="next" data-f="hole" value="${esc(r.hole)}" aria-label="Hole"></td>
+      <td class="shot" data-l="Shot"><input enterkeyhint="next" data-f="shot" value="${esc(r.shot)}" aria-label="Shot"></td>
+      <td class="stars" data-l="Tip review"><div class="starbox">${[1,2,3,4,5].map(n=>`<button class="star${r.stars>=n?' on':''}" data-star="${n}" aria-label="${n} star${n>1?'s':''}" aria-pressed="${r.stars>=n}">${r.stars>=n?'★':'☆'}</button>`).join('')}</div></td>
+      <td class="notes" data-l="Notes"><textarea data-f="notes" rows="1" aria-label="Notes">${esc(r.notes)}</textarea></td>
+      <td class="shots" data-l="Screenshots"><div class="imgs"></div></td>
+      <td class="del"><button class="delrow" title="Remove this tip" aria-label="Remove this tip">✕</button></td>
+    </tr>`;
+  }
+  function render(){
+    document.querySelectorAll('[data-meta]').forEach(el=> el.value = state.meta[el.dataset.meta]||'');
+    tbody.innerHTML = state.rows.map(rowHtml).join('');
+    state.rows.forEach((_,i)=>renderImgs(i));
+    tbody.querySelectorAll('textarea').forEach(grow);
+    summary(); status();
+  }
+  function renderImgs(i){
+    const box = tbody.querySelector(`tr[data-i="${i}"] .imgs`); if(!box) return;
+    const r = state.rows[i];
+    box.innerHTML = r.imgs.map((im,j)=>`<div class="thumb" data-j="${j}"><img src="${esc(imgSrc(im))}" alt="Screenshot ${j+1}" loading="lazy"><button class="x" data-rm="${j}" aria-label="Remove screenshot">×</button></div>`).join('')
+      + Array.from({length:r._busy||0},()=>'<div class="thumb busy">Adding…</div>').join('')
+      + `<button class="add" data-add title="Add screenshot" aria-label="Add screenshot">+</button>`;
+  }
+  function renderStars(i){
+    const r = state.rows[i];
+    tbody.querySelectorAll(`tr[data-i="${i}"] .star`).forEach(b=>{ const n=+b.dataset.star, on=r.stars>=n; b.classList.toggle('on',on); b.textContent=on?'★':'☆'; b.setAttribute('aria-pressed',on); });
+  }
+  function grow(t){ t.style.height='auto'; t.style.height=Math.max(42,t.scrollHeight)+'px'; }
+  function stats(){
+    const rated = state.rows.filter(r=>r.stars>0);
+    return { rated:rated.length, good:rated.filter(r=>r.stars>=4).length, mixed:rated.filter(r=>r.stars===3).length, poor:rated.filter(r=>r.stars<=2).length,
+      avg: rated.length ? (rated.reduce((a,r)=>a+r.stars,0)/rated.length).toFixed(1) : '-', shots: state.rows.reduce((a,r)=>a+r.imgs.length,0) };
+  }
+  function summary(){
+    const s = stats();
+    $('summary').innerHTML = `<span class="pill"><b>${s.rated}</b> rated</span><span class="pill">Avg <b>${s.avg}</b>★</span><span class="pill"><b>${s.good}</b> good 4-5★</span><span class="pill"><b>${s.mixed}</b> mixed 3★</span><span class="pill"><b>${s.poor}</b> poor 1-2★</span><span class="pill"><b>${s.shots}</b> screenshots</span>`;
+    $('countMini').textContent = s.rated + ' rated';
+  }
+
+  /* events */
+  document.querySelectorAll('[data-meta]').forEach(el=> el.addEventListener('input', ()=>{ state.meta[el.dataset.meta]=el.value; changed(); }));
+  tbody.addEventListener('input', e=>{
+    const tr = e.target.closest('tr'), f = e.target.dataset.f; if(!tr||!f) return;
+    state.rows[+tr.dataset.i][f] = e.target.value;
+    if(e.target.tagName==='TEXTAREA') grow(e.target);
+    changed();
+  });
+  tbody.addEventListener('focusin', e=>{ const tr=e.target.closest('tr'); if(tr) activeRow=+tr.dataset.i; });
+  tbody.addEventListener('click', async e=>{
+    const tr = e.target.closest('tr'); if(!tr) return;
+    const i = +tr.dataset.i; activeRow = i;
+    const star = e.target.closest('[data-star]');
+    if(star){ const n=+star.dataset.star; state.rows[i].stars = state.rows[i].stars===n ? 0 : n; renderStars(i); summary(); changed(); return; }
+    const rm = e.target.closest('[data-rm]');
+    if(rm){
+      e.stopPropagation();
+      if(!await ask('Remove this screenshot?','Remove')) return;
+      const [im] = state.rows[i].imgs.splice(+rm.dataset.rm,1);
+      renderImgs(i); summary(); changed();
+      if(im && im.id && assets){ try{ await assets.delete(im.id); }catch(err){} }
+      return;
+    }
+    if(e.target.closest('[data-add]')){ pickerRow=i; $('imgPicker').click(); return; }
+    const th = e.target.closest('.thumb:not(.busy)');
+    if(th){ openLightbox(imgSrc(state.rows[i].imgs[+th.dataset.j])); return; }
+    if(e.target.closest('.delrow')){
+      if(hasContent(state.rows[i]) && !await ask('Remove this tip and its screenshots?','Remove')) return;
+      state.rows.splice(i,1); if(!state.rows.length) state.rows.push(blankRow());
+      render(); changed();
+    }
+  });
+  $('imgPicker').addEventListener('change', async e=>{ const files=[...e.target.files]; e.target.value=''; await addImages(pickerRow, files); });
+
+  tbody.addEventListener('dragover', e=>{ const tr=e.target.closest('tr'); if(!tr) return; e.preventDefault(); tbody.querySelectorAll('.drop').forEach(x=>x.classList.remove('drop')); tr.classList.add('drop'); });
+  tbody.addEventListener('dragleave', e=>{ const tr=e.target.closest('tr'); if(tr && !tr.contains(e.relatedTarget)) tr.classList.remove('drop'); });
+  tbody.addEventListener('drop', async e=>{ const tr=e.target.closest('tr'); if(!tr) return; e.preventDefault(); tr.classList.remove('drop'); await addImages(+tr.dataset.i, e.dataTransfer.files); });
+  document.addEventListener('paste', async e=>{
+    const files = [...(e.clipboardData?.files||[])].filter(f=>f.type.startsWith('image/'));
+    if(!files.length) return;
+    e.preventDefault(); await addImages(Math.min(activeRow, state.rows.length-1), files);
+  });
+
+  const lb = $('lightbox');
+  function openLightbox(src){ lb.querySelector('img').src=src; lb.classList.add('show'); }
+  lb.addEventListener('click', ()=> lb.classList.remove('show'));
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') lb.classList.remove('show'); });
+
+  function addRow(){
+    let lastIdx = -1; for(let k=state.rows.length-1;k>=0;k--){ if(hasContent(state.rows[k])){ lastIdx=k; break; } }
+    const last = lastIdx >= 0 ? state.rows[lastIdx] : null;
+    let idx = state.rows.findIndex((r,k)=> k > lastIdx && !hasContent(r));
+    if(idx < 0){ state.rows.push(blankRow()); idx = state.rows.length-1; }
+    const r = state.rows[idx];
+    if(last && last.hole && !r.hole){ r.hole = last.hole; const t=String(last.shot).trim(), n=parseInt(t,10); if(!isNaN(n) && String(n)===t) r.shot = String(n+1); }
+    if(idx === state.rows.length-1) state.rows.push(blankRow());
+    render(); changed();
+    const tr = tbody.querySelector(`tr[data-i="${idx}"]`);
+    tr.scrollIntoView({behavior:'smooth', block:isPhone()?'start':'center'});
+    if(!isPhone()) tr.querySelector('[data-f="shot"]').focus();
+  }
+  $('addRowTop').onclick = addRow; $('addRowBottom').onclick = addRow;
+
+  $('reset').onclick = async ()=>{
+    const pending = unsent().length;
+    const warn = pending ? ` ${pending} tip${pending>1?'s are':' is'} not sent yet.` : ' Everything is already sent.';
+    if(!await ask('Start a new round? This clears the sheet.' + warn,'Clear sheet')) return;
+    const keepTester = state.meta.tester;
+    state = blankState(); state.meta.tester = keepTester; render(); changed(); window.scrollTo({top:0});
+  };
+
+  /* exports */
+  function fileName(ext){
+    const m = state.meta; const bits = ['caddie-shot-notes', m.tester, m.course, m.date].filter(Boolean).join('-');
+    return bits.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '.' + ext;
+  }
+  async function offer(name, text){
+    if(downloads){
+      try{ await downloads.save({filename:name, data: text instanceof Blob ? text : new Blob([text])}); }
+      catch(e){ if(!(e && e.code==='declined')) toast('Could not save the file here.'); }
+      return;
+    }
+    if(hosted){ toast('Downloads are not available in this view.'); return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(text instanceof Blob ? text : new Blob([text])); a.download = name;
+    document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 800);
+  }
+  const JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  let jspdfP = null;
+  function loadJsPDF(){
+    if(window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+    if(!jspdfP) jspdfP = new Promise((res,rej)=>{
+      const sc = document.createElement('script'); sc.src = JSPDF_URL; sc.async = true;
+      sc.onload = ()=> window.jspdf && window.jspdf.jsPDF ? res(window.jspdf.jsPDF) : rej();
+      sc.onerror = ()=>{ jspdfP = null; rej(); };
+      document.head.appendChild(sc);
+    });
+    return jspdfP;
+  }
+  // load an image and re-encode it small for the PDF
+  function pdfImage(src){
+    return new Promise(res=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const k = Math.min(1, 1000/Math.max(img.width,img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.max(1,Math.round(img.width*k)); c.height = Math.max(1,Math.round(img.height*k));
+        const g = c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height); g.drawImage(img,0,0,c.width,c.height);
+        res({data:c.toDataURL('image/jpeg',0.78), w:c.width, h:c.height});
+      };
+      img.onerror = ()=> res(null);
+      img.src = src;
+    });
+  }
+  // jsPDF's built-in font only covers Western European characters
+  const pdfText = t => String(t ?? '').replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/[–—]/g,'-').replace(/…/g,'...').replace(/[^\x09\x0A\x0D\x20-\x7E -ÿ€]/g,'');
+  function drawStar(doc, cx, cy, r, filled){
+    const pts = [];
+    for(let k=0;k<10;k++){ const a = -Math.PI/2 + k*Math.PI/5, rr = k%2 ? r*0.45 : r; pts.push([cx+rr*Math.cos(a), cy+rr*Math.sin(a)]); }
+    const seg = pts.slice(1).map((pt,k)=>[pt[0]-pts[k][0], pt[1]-pts[k][1]]);
+    doc.setLineWidth(0.25);
+    if(filled){ doc.setFillColor(245,179,1); doc.setDrawColor(217,154,0); } else { doc.setDrawColor(160,160,160); }
+    doc.lines(seg, pts[0][0], pts[0][1], [1,1], filled ? 'FD' : 'S', true);
+  }
+  async function buildPdf(){
+    const jsPDF = await loadJsPDF();
+    const doc = new jsPDF({unit:'mm', format:'a4'});
+    const W = 210, H = 297, M = 14, CW = W - 2*M;
+    const m = state.meta, s = stats();
+    let y = M;
+    const need = h => { if(y + h > H - M){ doc.addPage(); y = M; } };
+    doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.setTextColor(17); doc.text('Caddie Shot Notes', M, y+6); y += 11;
+    doc.setFontSize(9.5);
+    const fields = [['Tester',m.tester],['Course',m.course],['Date',m.date],['Tees',m.tees],['App build',m.build]];
+    let x = M;
+    fields.forEach(([k,v])=>{
+      const label = k + ': ', val = pdfText(v) || '-';
+      doc.setFont('helvetica','bold'); const lw = doc.getTextWidth(label);
+      doc.setFont('helvetica','normal'); const vw = doc.getTextWidth(val);
+      if(x + lw + vw > M + CW){ x = M; y += 5; }
+      doc.setFont('helvetica','bold'); doc.text(label, x, y);
+      doc.setFont('helvetica','normal'); doc.text(val, x+lw, y);
+      x += lw + vw + 7;
+    });
+    y += 6;
+    doc.setFontSize(9); doc.setTextColor(80);
+    doc.text(`${s.rated} tips rated  |  average ${s.avg} stars  |  ${s.good} good (4-5)  |  ${s.mixed} mixed (3)  |  ${s.poor} poor (1-2)  |  ${s.shots} screenshots`, M, y); y += 4.5;
+    doc.setFontSize(8); doc.setTextColor(120);
+    doc.text('5 Great recommendation  |  4 Good  |  3 OK with issues  |  2 Poor decision  |  1 Would make my score worse', M, y); y += 5;
+    doc.setDrawColor(0); doc.setLineWidth(0.6); doc.line(M, y, M+CW, y); y += 5;
+
+    const rows = state.rows.filter(hasContent);
+    if(!rows.length){ doc.setFontSize(11); doc.setTextColor(17); doc.text('No tips yet.', M, y+4); }
+    const IMG_W = 32, GAP = 4, PER_ROW = Math.floor((CW + GAP)/(IMG_W + GAP));
+    for(const r of rows){
+      const imgs = [];
+      for(const im of r.imgs){ const d = await pdfImage(imgSrc(im)); if(d) imgs.push(d); }
+      doc.setFontSize(10);
+      const notes = doc.splitTextToSize(pdfText(r.notes) || '', CW);
+      const firstImgH = imgs.length ? Math.min(72, IMG_W * imgs[0].h / imgs[0].w) : 0;
+      need(10 + notes.length*4.6 + (firstImgH ? firstImgH + 4 : 0));
+      // heading line: hole, shot, stars
+      doc.setTextColor(17); doc.setFont('helvetica','bold'); doc.setFontSize(11.5);
+      const head = [r.hole ? 'Hole ' + pdfText(r.hole) : '', r.shot ? 'Shot ' + pdfText(r.shot) : ''].filter(Boolean).join('   ') || 'Tip';
+      doc.text(head, M, y+4);
+      const sx = M + doc.getTextWidth(head) + 6;
+      for(let k=1;k<=5;k++) drawStar(doc, sx + (k-1)*6.2 + 2.6, y+2.7, 2.6, r.stars >= k);
+      if(!r.stars){ doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(140); doc.text('not rated', sx + 33, y+4); }
+      y += 8.5;
+      if(notes.length){
+        doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(30);
+        for(const line of notes){ need(5); doc.text(line, M, y+3); y += 4.6; }
+        y += 1.5;
+      }
+      // screenshots, wrapping onto new rows and pages
+      for(let k=0;k<imgs.length;k+=PER_ROW){
+        const group = imgs.slice(k, k+PER_ROW);
+        const rowH = Math.max(...group.map(d=>Math.min(72, IMG_W * d.h / d.w)));
+        need(rowH + 3);
+        group.forEach((d,j)=>{
+          let w = IMG_W, h = IMG_W * d.h / d.w; if(h > 72){ h = 72; w = 72 * d.w / d.h; }
+          const ix = M + j*(IMG_W+GAP);
+          doc.addImage(d.data, 'JPEG', ix, y, w, h, undefined, 'FAST');
+          doc.setDrawColor(200); doc.setLineWidth(0.2); doc.rect(ix, y, w, h);
+        });
+        y += rowH + 3;
+      }
+      y += 2; need(4);
+      doc.setDrawColor(215); doc.setLineWidth(0.2); doc.line(M, y, M+CW, y); y += 5;
+    }
+    const pages = doc.getNumberOfPages();
+    for(let k=1;k<=pages;k++){ doc.setPage(k); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(150);
+      doc.text(`${pdfText(m.course)} ${pdfText(m.date)}`.trim(), M, H-7); doc.text(`Page ${k} of ${pages}`, W-M, H-7, {align:'right'}); }
+    return doc.output('blob');
+  }
+  $('report').onclick = async ()=>{
+    const btn = $('report'); btn.disabled = true; const old = btn.textContent; btn.textContent = 'Preparing PDF…';
+    try{
+      let blob;
+      try{ blob = await buildPdf(); }
+      catch(e){ toast('Could not build the PDF. Check your connection and try again.'); return; }
+      await offer(fileName('pdf'), blob);
+    } finally { btn.disabled = false; btn.textContent = old; }
+  };
+  $('csv').onclick = ()=>{
+    const q = v => '"' + String(v??'').replace(/"/g,'""') + '"';
+    const m = state.meta;
+    const lines = [['Tester','Course','Date','Tees','App build','Hole','Shot','Stars','Notes','Screenshots'].map(q).join(',')];
+    state.rows.filter(hasContent).forEach(r=> lines.push([m.tester,m.course,m.date,m.tees,m.build,r.hole,r.shot,r.stars||'',r.notes,r.imgs.length].map(q).join(',')));
+    offer(fileName('csv'), '﻿' + lines.join('\r\n'));
+  };
+  if(!hosted){ $('print').hidden = false; $('print').onclick = ()=> window.print(); }
+
+  /* start */
+  (async ()=>{
+    const local = await loadLocal();
+    if(local) state = local;
+    render();
+    if(!hosted) return;
+    syncLine('Connecting to your account…');
+    const [db, user, as, dl] = await Promise.all([use('db'), use('user'), use('assets'), use('downloads')]);
+    assets = as; downloads = dl;
+    let uid = null; try{ uid = user ? await user.id() : null; }catch(e){}
+    if(db && uid){
+      try{
+        const ref = db.doc('data/users/' + uid + '/current');
+        const snap = await Promise.race([ref.get(), new Promise((_,rej)=>setTimeout(()=>rej('timeout'),10000))]);
+        remote = {ref}; remoteOk = true;
+        const body = snap.exists ? snap.data() : null;
+        if(body && Array.isArray(body.rows) && (body.updatedAt||0) > (state.updatedAt||0)){
+          state = JSON.parse(JSON.stringify(body)); state.rows.forEach(r=>{ r.imgs = r.imgs||[]; });
+          render(); await saveLocal();
+        } else if(state.updatedAt){ saveRemote(); }
+      }catch(e){}
+    }
+    if(!downloads){ $('report').hidden = true; $('csv').hidden = true; }
+    status();
+  })();
+})();
+</script>
+</body>
+</html>

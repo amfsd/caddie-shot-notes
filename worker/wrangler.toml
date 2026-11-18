@@ -1,0 +1,9 @@
+name = "caddie-shot-notes-relay"
+main = "src/index.js"
+compatibility_date = "2025-11-01"
+
+[vars]
+NOTION_DATA_SOURCE = "41c84193-0c6f-8138-9e38-000bcac007a0"
+ALLOWED_ORIGINS = "https://amfsd.github.io,http://localhost:8000"
+
+# NOTION_TOKEN is a secret: set it with `npx wrangler secret put NOTION_TOKEN`, never here.
