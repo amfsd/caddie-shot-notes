@@ -174,7 +174,7 @@
   const isPhone = () => window.matchMedia('(max-width:720px)').matches;
 
   // Relay that writes tips into the Notion database (Cloudflare Worker, see worker/).
-  const RELAY_URL = 'https://caddie-shot-notes-relay.REPLACE.workers.dev';
+  const RELAY_URL = 'https://caddie-shot-notes-relay.ama-form.workers.dev';
 
   const newRoundId = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10));
   const blankRow = () => ({hole:'', shot:'', stars:0, notes:'', imgs:[]});
